@@ -7,6 +7,9 @@ defmodule Tree do
   defp loop() do
     receive do
       {:broadcast, tree, i, caller} ->
+        # Mandamos al proceso, su padre.
+        send(self(), {:broadcast, caller})
+        # Ejecutamos la función broadcast.
         broadcast(tree, i)
       {:convergecast, tree, i, caller} -> :ok #Aquí va su código.
     end
@@ -29,6 +32,8 @@ defmodule Tree do
     if node == [] do
       send(Map.get(tree, 0), {:broadcast, tree, n, self()})
     else
+      # Guarda al padre.
+      padre = recibeMensaje()
       # Obtiene el valor del nodo.
       node = List.first(node)
       # Obtiene el indice que se corresponde al hijo izquierdo.
@@ -51,10 +56,40 @@ defmodule Tree do
       end
       # Si no tuvo ni hijo izquierdo, ni hijo derecho, significa que es hoja.
       if hijoD >= n && hijoI >= n do
-        IO.puts("El nodo #{inspect node} con proceso #{inspect self()} es hoja.")
+        # Mandamos a la raíz un mensaje indicando el proceso y que es hoja.
+        send(Map.get(tree, 0), {self(), :hoja})
+      end
+      # Desde la raíz, va a recibir m mensajes, uno por cada hoja, y va a reenviarlos al proceso pricnipal.
+      if Map.get(tree, node) == Map.get(tree, 0) do
+        numHojas = div(n + 1,2)
+        Enum.each(0..numHojas, fn _ -> recibeMensaje(padre) end)
       end
     end
-    :ok
+    :terminado
+  end
+
+  @doc """
+    Función auxiliar que espera a recibir al padre
+  """
+  def recibeMensaje() do
+    receive do
+      {:broadcast, caller} ->
+        caller
+    end
+
+  end
+
+  @doc """
+    Función auxiliar que va a mandar al padre el mensaje recibido.
+
+    Se usa para formar un ciclo y enviar mensajes por cada hoja.
+  """
+  def recibeMensaje(padre) do
+    receive do
+      {caller, :hoja} ->
+        send(padre, {caller, :hoja})
+    end
+
   end
 
   def convergecast(tree, n) do
