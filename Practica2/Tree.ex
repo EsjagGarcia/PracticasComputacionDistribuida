@@ -14,9 +14,8 @@ defmodule Tree do
       {:convergecast, tree, i, caller} ->
         # Mandamos al proceso, su padre.
         send(self(), {:convergecast, caller})
-        IO.puts("Holi #{inspect caller} yo soy #{inspect self()}")
         # Ejecutamos la función broadcast.
-        #convergecast(tree, i)
+        convergecast(tree, i)
     end
   end
 
@@ -82,6 +81,8 @@ defmodule Tree do
     receive do
       {:broadcast, caller} ->
         caller
+      {:convergecast, caller} ->
+        caller
     end
 
   end
@@ -112,7 +113,40 @@ defmodule Tree do
       # Manda un mensaje a todas las hojas.
       Enum.each(numHojas..(n-1), fn x -> send(Map.get(tree, x), {:convergecast, tree, n, self()}) end)
     else
+      # Guarda al padre (aquel nodo que le mando mensaje).
+      antecesor = recibeMensaje()
+      # Obtiene el valor del nodo.
+      node = List.first(node)
+      # El primer proceso en el Map, es la raíz la del árbol.
+      if node == 0 do
+        IO.puts("Soy #{inspect self()} y soy la raíz")
+      else
+        # Como nuestros árboles son binarios, y la forma de construirlos, implica que se forman de manera
+        # ordenada (como si balancearamos), significa que todo nodo impar es hijo izquierdo, y todo nodo
+        # par es hijo derecho.
+        # Caso para el hijo izquierdo
+        if rem(node,2) == 1 do
+          # Encuentra su padre, usando un despeje de i, en la propiedad descrita en el documento.
+          padre = div((node - 1),2)
+          # Obitene el ID del proceso que es su padre.
+          padre = Map.get(tree, padre)
+          IO.puts("Soy #{inspect self()} y mi padre es #{inspect padre}")
+          # Manda mensaje a su padre (en el árbol).
+          send(padre, {:convergecast, tree, n, self()})
+        end
+        # Caso para el hijo derecho.
+        if rem(node,2) == 0 do
+          # Encuentra su padre, usando un despeje de i, en la propiedad descrita en el documento.
+          padre = div((node - 2),2)
+          # Obitene el ID del proceso que es su padre.
+          padre = Map.get(tree, padre)
+          IO.puts("Soy #{inspect self()} y mi padre es #{inspect padre}")
+          # Manda mensaje a su padre (en el árbol).
+          send(padre, {:convergecast, tree, n, self()})
+        end
+      end
     end
+    :terminado
   end
 
 end
