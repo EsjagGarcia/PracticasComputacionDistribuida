@@ -119,7 +119,10 @@ defmodule Tree do
       node = List.first(node)
       # El primer proceso en el Map, es la raíz la del árbol.
       if node == 0 do
-        IO.puts("Soy #{inspect self()} y soy la raíz")
+        # Manda mensaje al último proceso, que tiene guardado el ID del proceso principal. En general, todos
+        # los procesos hoja lo guarda. Pero siempre podemos asegurar que sea cualquier árbol, el último cumple
+        # esto.
+        send(Map.get(tree, n-1), {:raiz, self()})
       else
         # Como nuestros árboles son binarios, y la forma de construirlos, implica que se forman de manera
         # ordenada (como si balancearamos), significa que todo nodo impar es hijo izquierdo, y todo nodo
@@ -130,7 +133,6 @@ defmodule Tree do
           padre = div((node - 1),2)
           # Obitene el ID del proceso que es su padre.
           padre = Map.get(tree, padre)
-          IO.puts("Soy #{inspect self()} y mi padre es #{inspect padre}")
           # Manda mensaje a su padre (en el árbol).
           send(padre, {:convergecast, tree, n, self()})
         end
@@ -140,9 +142,16 @@ defmodule Tree do
           padre = div((node - 2),2)
           # Obitene el ID del proceso que es su padre.
           padre = Map.get(tree, padre)
-          IO.puts("Soy #{inspect self()} y mi padre es #{inspect padre}")
           # Manda mensaje a su padre (en el árbol).
           send(padre, {:convergecast, tree, n, self()})
+        end
+      end
+      # El último nodo, la hoja, va a esperar a que la raíz mande mensaje.
+      if node == n-1 do
+        receive do
+          # Manda mensaje al nodo princioal.
+          {:raiz, caller} ->
+            send(antecesor, {:raiz, caller})
         end
       end
     end
