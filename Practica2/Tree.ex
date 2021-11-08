@@ -61,10 +61,10 @@ defmodule Tree do
       # Si no tuvo ni hijo izquierdo, ni hijo derecho, significa que es hoja.
       if hijoD >= n && hijoI >= n do
         # Mandamos a la raíz un mensaje indicando el proceso y que es hoja.
-        send(Map.get(tree, 0), {self(), :hoja})
+        send(Map.get(tree, 0), {:hoja, self()})
       end
       # Desde la raíz, va a recibir m mensajes, uno por cada hoja, y va a reenviarlos al proceso pricnipal.
-      if Map.get(tree, node) == Map.get(tree, 0) do
+      if node == 0 do
         # Div, divide entre enteros, por lo que es como si hicieramos piso al resultado de la división.
         numHojas = div(n + 1,2)
         # Por cad hoja enviamos un mensaje al nodo principal.
@@ -90,12 +90,12 @@ defmodule Tree do
   @doc """
     Función auxiliar que va a mandar al padre el mensaje recibido.
 
-    Se usa para formar un ciclo y enviar mensajes por cada hoja.
+    Se usa para formar un ciclo y enviar mensajes por cada hoja de manera iterativa.
   """
   def recibeMensaje(padre) do
     receive do
-      {caller, :hoja} ->
-        send(padre, {caller, :hoja})
+      {:hoja, caller} ->
+        send(padre, {:hoja, caller})
     end
 
   end
