@@ -11,7 +11,12 @@ defmodule Tree do
         send(self(), {:broadcast, caller})
         # Ejecutamos la función broadcast.
         broadcast(tree, i)
-      {:convergecast, tree, i, caller} -> :ok #Aquí va su código.
+      {:convergecast, tree, i, caller} ->
+        # Mandamos al proceso, su padre.
+        send(self(), {:convergecast, caller})
+        IO.puts("Holi #{inspect caller} yo soy #{inspect self()}")
+        # Ejecutamos la función broadcast.
+        #convergecast(tree, i)
     end
   end
 
@@ -61,7 +66,9 @@ defmodule Tree do
       end
       # Desde la raíz, va a recibir m mensajes, uno por cada hoja, y va a reenviarlos al proceso pricnipal.
       if Map.get(tree, node) == Map.get(tree, 0) do
+        # Div, divide entre enteros, por lo que es como si hicieramos piso al resultado de la división.
         numHojas = div(n + 1,2)
+        # Por cad hoja enviamos un mensaje al nodo principal.
         Enum.each(0..numHojas, fn _ -> recibeMensaje(padre) end)
       end
     end
@@ -93,8 +100,19 @@ defmodule Tree do
   end
 
   def convergecast(tree, n) do
-    #Aquí va su código.
-    :ok
+    # Para simplificar y poder obtener de manera más fácil los hijos del árbol, debemos obtener la llave en el
+    # Map que guarda el valor del PID.
+    node = Enum.filter(0..n, fn x -> Map.get(tree, x) == self() end)
+    # Caso inicial, si no encuentra que el proceso que esta invocando la función, significa que es el proceso
+    # principal, por lo que inicializa. Mandando mensaje a todas las hojas.
+    if node == [] do
+      # Calcula el número de hojas el árbol. Sabiendo que, los últimos k nodos, son las k hojas, del árbol.
+      numHojas = div(n + 1,2)
+      numHojas = n - numHojas
+      # Manda un mensaje a todas las hojas.
+      Enum.each(numHojas..(n-1), fn x -> send(Map.get(tree, x), {:convergecast, tree, n, self()}) end)
+    else
+    end
   end
 
 end
