@@ -8,37 +8,42 @@ defmodule Consensus do
     #todos los hilos tengan el mismo número, el cual va a ser enviado vía un
     #mensaje al hilo principal.
     Enum.map(1..n, fn _ ->
-      spawn(fn -> loop(:start, 0, :rand.uniform(10)), end)
+      spawn(fn -> loop(:start, 0, :rand.uniform(10)) end)
     end)
+    #Agregar código es válido.
   end
 
   defp loop(state, value, miss_prob) do
+    #inicia código inamovible.
     if(state == :fail) do
       loop(state, value, miss_prob)
+    end
+    # Termina código inamovible.
     receive do
       {:get_value, caller} ->
-	send(caller, value)
+	      send(caller, value) #No modificar.
+      #Aquí se pueden definir más mensajes.
     after
-      1000 -> :ok
+      1000 -> :ok #Aquí analizar porqué está esto aquí.
     end
-    case value do
+    case state do
       :start ->
-	chosen = :rand.uniform(10000)
-	if(rem(chosen, miss_prob) == 0) do
-	  loop(:fail, chosen, miss_prob)
-	else
-	  loop(:active, chosen, miss_prob)
-	end
+	      chosen = :rand.uniform(10000)
+	      if(rem(chosen, miss_prob) == 0) do
+	        loop(:fail, chosen, miss_prob)
+  	    else
+	        loop(:active, chosen, miss_prob)
+	      end
       :fail -> loop(:fail, value, miss_prob)
       :active -> :ok #Aquí va su código.
     end
   end
 
   def consensus(processes) do
-    Process.sleep(5000)
+    Process.sleep(10000)
     #Aquí va su código, deben de regresar el valor unánime decidido
     #por todos los procesos.
     :ok
   end
-  
+
 end
