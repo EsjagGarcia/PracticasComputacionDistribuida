@@ -35,15 +35,41 @@ defmodule Consensus do
 	        loop(:active, chosen, miss_prob)
 	      end
       :fail -> loop(:fail, value, miss_prob)
-      :active -> :ok #Aquí va su código.
+      :active ->
+        receive do
+          {:proposals, proposals} ->
+            value = Enum.min(proposals)
+            loop(:active, value, miss_prob)
+        end
     end
   end
 
   def consensus(processes) do
-    Process.sleep(10000)
-    #Aquí va su código, deben de regresar el valor unánime decidido
-    #por todos los procesos.
-    :ok
+    Process.sleep(100)
+    values = Enum.map(processes, fn pid ->
+      send(pid, {:get_value, self()})
+      receive do
+        x -> x
+      after
+        100 -> :ok
+      end
+    end)
+    values = Enum.filter(values, fn x -> x != :ok end)
+    values = Enum.map(processes, fn pid -> send(pid, {:proposals, values}) end)
+    values = Enum.map(processes, fn pid ->
+      send(pid, {:get_value, self()})
+      receive do
+        x -> x
+      after
+        100 -> :ok
+      end
+    end)
+    values = Enum.filter(values, fn x -> x != :ok end)
+    primero = Enum.at(values, 0)
+    if Enum.all?(values, fn x -> x == primero end) do
+      primero
+    else
+      consensus(processes)
+    end
   end
-
 end
