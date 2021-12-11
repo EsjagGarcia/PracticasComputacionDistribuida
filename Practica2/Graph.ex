@@ -11,8 +11,7 @@ defmodule Graph do
           state == -1 || new_state < state -> new_state
           true -> state
         end
-        neighs = Map.get(graph, self())
-        Enum.map(neighs, fn x -> send(x, {:bfs, graph, state+1})end)
+        Enum.map(Map.get(graph, self()), fn x -> send(x, {:bfs, graph, state+1})end)
         loop(state)
 
       {:dfs, graph, new_state} ->
@@ -20,10 +19,9 @@ defmodule Graph do
           state == -1 || new_state < state -> new_state
           true -> state
         end
-        neighs = Map.get(graph, self())
-        nodo = Enum.random(neighs)
-        Enum.map(neighs, fn x -> send(x, {:dfs, graph, state+1})end)
-        graph = Map.put(graph, self(), Map.delete(neighs, nodo))
+        nodo = Enum.random(Map.get(graph, self()))
+        Enum.map(Map.get(graph, self()), fn x -> send(x, {:dfs, graph, state+1})end)
+        graph = Map.put(graph, self(), Map.delete(Map.get(graph, self()), nodo))
         loop(state)
 
       {:get_state, caller} -> #Estos mensajes solo los manda el main.
