@@ -1,17 +1,42 @@
 defmodule Graph do
-  
+
   def new(n) do
     create_graph(Enum.map(1..n, fn _ -> spawn(fn -> loop(-1) end) end), %{}, n)
   end
 
   defp loop(state) do
     receive do
-      {:bfs, graph, new_state} -> :ok
-      {:dfs, graph, new_state} -> :ok
-      {:get_state, caller} -> send(caller, {self, state}) #Estos mensajes solo los manda el main.
+      {:bfs, graph, new_state} ->
+        state = cond do
+          state == -1 || new_state < state -> new_state
+          true -> state
+        end
+        neighs = Map.get(graph, self())
+        Enum.map(neighs, fn x -> send(x, {:bfs, graph, state+1})end)
+        loop(state)
+
+      {:dfs, graph, new_state} ->
+        state = cond do
+          state == -1 || new_state < state -> new_state
+          true -> state
+        end
+        neighs = Map.get(graph, self())
+        nodo = Enum.random(neighs)
+        Enum.map(neighs, fn x -> send(x, {:dfs, graph, state+1})end)
+        graph = Map.put(graph, self(), Map.delete(neighs, nodo))
+        loop(state)
+
+      {:get_state, caller} -> #Estos mensajes solo los manda el main.
+        if state == -1 do
+          Process.sleep(5000)
+          send(self(), {:get_state, caller})
+          loop(state)
+        else
+          send(caller, {self(), state})
+        end
     end
   end
-  
+
   defp create_graph([], graph, _) do
     graph
   end
@@ -48,21 +73,45 @@ defmodule Graph do
   def random_src(graph) do
     Enum.random(Map.keys(graph))
   end
-  
+
   def bfs(graph, src) do
-    :ok
+    send(src, {:bfs, graph, 0})
+    estados(Map.keys(graph), map_size(graph), 0)
+    Enum.map(Map.keys(graph), fn x -> send(x,{:get_state,self()})
+      receive do
+        x -> x
+      end
+    end)
   end
 
   def bfs(graph) do
     bfs(graph, random_src(graph))
   end
-    
+
   def dfs(graph, src) do
-    :ok
+    send(src, {:dfs, graph, 0})
+    estados(Map.keys(graph), map_size(graph), 0)
+    Enum.map(Map.keys(graph), fn x -> send(x,{:get_state,self()})
+      receive do
+        x -> x
+      end
+    end)
   end
 
   def dfs(graph) do
     dfs(graph, random_src(graph))
   end
-  
+
+  @doc """
+    Función auxiliar que obtiene los estados de los nodos.
+
+    Obtiene los estados de los nodos de manera recursiva.
+  """
+  def estados(nodos, size, distancia) do
+    if distancia < size do
+      send(Enum.at(nodos, distancia), {:get_state, self()})
+      estados(nodos, size, distancia+1)
+    end
+  end
+
 end
